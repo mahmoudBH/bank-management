@@ -4,8 +4,22 @@ import "react-credit-cards-2/dist/es/styles-compiled.css";
 import axios from "axios";
 import { motion } from "framer-motion";
 import styled from "styled-components";
+import { jwtDecode } from "jwt-decode";
 
-// Conteneur principal avec un fond moderne
+// Déclaration des devises supportées
+const currencies = [
+  { code: 'EUR', flag: '🇪🇺', name: 'Euro' },
+  { code: 'USD', flag: '🇺🇸', name: 'Dollar US' },
+  { code: 'GBP', flag: '🇬🇧', name: 'Livre Sterling' },
+  { code: 'CHF', flag: '🇨🇭', name: 'Franc Suisse' },
+  { code: 'CAD', flag: '🇨🇦', name: 'Dollar Canadien' },
+];
+
+// Configuration de l'API de taux de change
+const API_KEY = '5aa520b11922e9918f8c6b56';
+const BASE_URL = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/EUR`;
+
+// ==================== Styled Components ====================
 const PageContainer = styled.div`
   padding: 120px 2rem 2rem 2rem;
   min-height: 100vh;
@@ -15,7 +29,6 @@ const PageContainer = styled.div`
   align-items: center;
 `;
 
-// Conteneur supérieur en deux colonnes
 const TopSection = styled.div`
   width: 90%;
   max-width: 1200px;
@@ -26,13 +39,12 @@ const TopSection = styled.div`
   flex-wrap: wrap;
 `;
 
-// Bloc Solde Total
 const TotalBalanceCard = styled(motion.div)`
   flex: 1;
   min-width: 280px;
   background: #ffffff;
   border-radius: 16px;
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
@@ -42,22 +54,31 @@ const TotalBalanceCard = styled(motion.div)`
   overflow: hidden;
 `;
 
+const RateInfo = styled.div`
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.5rem;
+  text-align: center;
+`;
+
 const CurrencySelector = styled.div`
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
 `;
 
 const CurrencyButton = styled.button`
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   border: none;
-  border-radius: 20px;
+  border-radius: 15px;
   background: ${props => props.active ? '#1e3c72' : '#f0f0f0'};
   color: ${props => props.active ? 'white' : '#333'};
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
-  
+  font-size: 0.85rem;
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
@@ -65,14 +86,14 @@ const CurrencyButton = styled.button`
 `;
 
 const TotalTitle = styled.h3`
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 600;
   color: #1e3c72;
   margin-bottom: 0.5rem;
 `;
 
 const TotalAmount = styled.div`
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: bold;
   color: #2a5298;
 `;
@@ -87,7 +108,6 @@ const DecorativeStripe = styled(motion.div)`
   transform: skewX(-20deg);
 `;
 
-// Bloc Ajouter une carte
 const AddCardForm = styled(motion.div)`
   flex: 1;
   min-width: 280px;
@@ -107,7 +127,6 @@ const FormTitle = styled.h3`
   text-align: center;
 `;
 
-// Formulaire et ses éléments
 const StyledForm = styled.form`
   display: flex;
   flex-direction: column;
@@ -169,7 +188,6 @@ const ErrorMessage = styled(Message)`
   color: #721c24;
 `;
 
-// Section Cartes enregistrées
 const CardsSection = styled.div`
   width: 90%;
   max-width: 1200px;
@@ -183,7 +201,6 @@ const SectionTitle = styled.h3`
   text-align: center;
 `;
 
-// Affichage réaliste d'une carte de paiement
 const CardDisplay = styled(motion.div)`
   background: linear-gradient(135deg, #2a5298, #1e3c72);
   border-radius: 16px;
@@ -226,6 +243,8 @@ const PreviewWrapper = styled.div`
   justify-content: center;
 `;
 
+// ==================== Composant PaymentForm ====================
+
 const PaymentForm = () => {
   const [cardDetails, setCardDetails] = useState({
     number: "",
@@ -240,13 +259,47 @@ const PaymentForm = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [currency, setCurrency] = useState('EUR');
-const [conversionRate] = useState(1.08); // Taux de conversion fictif
+  const [exchangeRates, setExchangeRates] = useState({});
+  const [ratesLoading, setRatesLoading] = useState(true);
+  const [ratesError, setRatesError] = useState("");
 
-  // On suppose que l'ID utilisateur et le token sont stockés dans localStorage
-  const user_id = localStorage.getItem("user_id") || 1;
+  // Récupération des taux de change
+  useEffect(() => {
+    const fetchExchangeRates = async () => {
+      try {
+        const response = await axios.get(BASE_URL);
+        if (response.data.result === 'success') {
+          setExchangeRates(response.data.conversion_rates);
+          setRatesError("");
+        } else {
+          setRatesError("Erreur de récupération des taux");
+        }
+      } catch (error) {
+        setRatesError("Échec de la connexion à l'API");
+        console.error("Erreur API:", error);
+      } finally {
+        setRatesLoading(false);
+      }
+    };
+
+    fetchExchangeRates();
+    const interval = setInterval(fetchExchangeRates, 3600000); // Actualisation toutes les heures
+    return () => clearInterval(interval);
+  }, []);
+
+  // Récupération du token et décodage pour obtenir l'ID utilisateur
   const token = localStorage.getItem("token");
+  let user_id = null;
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      user_id = decoded.userId;
+    } catch (error) {
+      console.error("Erreur de décodage du token:", error);
+    }
+  }
 
-  // Récupération des cartes enregistrées
+  // Récupération des cartes enregistrées pour l'utilisateur connecté
   const fetchCards = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/get-payments?user_id=${user_id}`, {
@@ -259,8 +312,8 @@ const [conversionRate] = useState(1.08); // Taux de conversion fictif
   };
 
   useEffect(() => {
-    fetchCards();
-  }, [token]);
+    if (token && user_id) fetchCards();
+  }, [token, user_id]);
 
   const handleInputChange = (e) => {
     setCardDetails({ ...cardDetails, [e.target.name]: e.target.value });
@@ -277,8 +330,8 @@ const [conversionRate] = useState(1.08); // Taux de conversion fictif
     setMessage("");
 
     try {
+      // Préparer le payload (l'ID utilisateur est récupéré côté serveur via le token)
       const payload = {
-        user_id,
         card_number: cardDetails.number,
         card_holder: cardDetails.name,
         expiry_date: cardDetails.expiry,
@@ -304,40 +357,53 @@ const [conversionRate] = useState(1.08); // Taux de conversion fictif
   return (
     <PageContainer>
       <TopSection>
-        {/* Solde Total */}
+        {/* Bloc Solde Total */}
         <TotalBalanceCard
-            initial={{ x: -100, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 80 }}
-            >
-            <DecorativeStripe
-                animate={{ x: ["-100%", "100%"] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            />
-            <CurrencySelector>
-                <CurrencyButton 
-                active={currency === 'EUR'} 
-                onClick={() => setCurrency('EUR')}
-                >
-                EUR
-                </CurrencyButton>
-                <CurrencyButton                             
-                active={currency === 'USD'} 
-                onClick={() => setCurrency('USD')}
-                >
-                USD
-                </CurrencyButton>
-            </CurrencySelector>
-            <TotalTitle>Solde Total</TotalTitle>
-            <TotalAmount>
-                {(currency === 'EUR' 
-                ? totalAmount 
-                : totalAmount * conversionRate
-                ).toFixed(2)} {currency === 'EUR' ? '€' : '$'}
-            </TotalAmount>
-            </TotalBalanceCard>
+          initial={{ x: -100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 80 }}
+        >
+          <DecorativeStripe
+            animate={{ x: ["-100%", "100%"] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          />
 
-        {/* Formulaire Ajouter une Carte */}
+          <CurrencySelector>
+            {currencies.map((curr) => (
+              <CurrencyButton
+                key={curr.code}
+                active={currency === curr.code}
+                onClick={() => setCurrency(curr.code)}
+              >
+                {curr.flag} {curr.code}
+              </CurrencyButton>
+            ))}
+          </CurrencySelector>
+
+          <TotalTitle>Solde Total</TotalTitle>
+
+          {ratesLoading ? (
+            <div className="loading">Chargement des taux...</div>
+          ) : ratesError ? (
+            <div className="error">{ratesError}</div>
+          ) : (
+            <>
+              <TotalAmount>
+                {(totalAmount * exchangeRates[currency])?.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: currency,
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </TotalAmount>
+              <RateInfo>
+                1 EUR = {exchangeRates[currency]?.toFixed(3)} {currency}
+              </RateInfo>
+            </>
+          )}
+        </TotalBalanceCard>
+
+        {/* Bloc Ajouter une Carte */}
         <AddCardForm
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}

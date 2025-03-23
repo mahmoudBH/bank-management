@@ -1,5 +1,132 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import styled from 'styled-components';
+
+const PageContainer = styled.div`
+  padding: 120px 2rem 2rem 2rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const ProfileCard = styled.div`
+  background: #fff;
+  width: 100%;
+  max-width: 600px;
+  padding: 40px 30px;
+  margin: 40px auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  &:hover {
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const Title = styled.h1`
+  text-align: center;
+  margin-bottom: 30px;
+  color: #003087;
+  font-size: 2rem;
+  letter-spacing: 0.5px;
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 20px;
+`;
+
+const Label = styled.label`
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #003087;
+  font-size: 0.95rem;
+`;
+
+const Input = styled.input`
+  width: 96%;
+  padding: 14px;
+  font-size: 16px;
+  border: 1px solid #ccd0d5;
+  border-radius: 6px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+  &:focus {
+    border-color: #003087;
+    box-shadow: 0 0 8px rgba(0, 48, 135, 0.2);
+    outline: none;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  border: 1px solid #ccd0d5;
+  border-radius: 6px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+  &:focus {
+    border-color: #003087;
+    box-shadow: 0 0 8px rgba(0, 48, 135, 0.2);
+    outline: none;
+  }
+`;
+
+const Button = styled.button`
+  width: 100%;
+  padding: 14px;
+  background-color: #003087;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+
+  &:hover {
+    background-color: #002060;
+    transform: translateY(-2px);
+  }
+`;
+
+const EditButton = styled(Button)`
+  background-color: #0070ba;
+  margin-top: 20px;
+  &:hover {
+    background-color: #005b9f;
+  }
+`;
+
+const ProfilePhotoContainer = styled.div`
+  text-align: center;
+  margin-bottom: 20px;
+`;
+
+const ProfileImage = styled.img`
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 10px;
+`;
+
+const FileInput = styled.input`
+  margin-top: 10px;
+`;
+
+const SuccessMessage = styled.div`
+  color: #28a745;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  font-weight: 500;
+`;
 
 const Profile = () => {
   const [user, setUser] = useState({
@@ -13,9 +140,9 @@ const Profile = () => {
     city: '',
     zip: '',
     gender: '',
-    profile_photo: '' // URL ou nom de fichier de la photo de profil
+    profile_photo: ''
   });
-  const [file, setFile] = useState(null); // Pour le fichier de la photo
+  const [file, setFile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -34,7 +161,6 @@ const Profile = () => {
         headers: { 'Authorization': `Bearer ${token}` },
       })
       .then((response) => {
-        // On s'assure que profile_photo est défini
         setUser({
           ...response.data,
           profile_photo: response.data.profile_photo || ''
@@ -67,7 +193,7 @@ const Profile = () => {
       return;
     }
 
-    // Utilisation de FormData pour inclure le fichier s'il existe
+    // Utilisation de FormData pour inclure le fichier
     const formData = new FormData();
     formData.append('firstname', user.firstname);
     formData.append('lastname', user.lastname);
@@ -93,14 +219,11 @@ const Profile = () => {
       .then((response) => {
         setMessage('Profil mis à jour avec succès!');
         setIsEditing(false);
-        // Mise à jour de l'état utilisateur avec les nouvelles infos, notamment la photo
-        // On suppose que le backend renvoie le profil mis à jour incluant profile_photo
         setUser((prevUser) => ({
           ...prevUser,
           ...response.data,
           profile_photo: response.data.profile_photo || prevUser.profile_photo
         }));
-        // Réinitialisation du fichier sélectionné
         setFile(null);
       })
       .catch((err) => {
@@ -109,261 +232,146 @@ const Profile = () => {
   };
 
   if (loading) {
-    return <div>Chargement...</div>;
+    return <PageContainer>Chargement...</PageContainer>;
   }
   if (error) {
-    return <div style={{ color: '#e74c3c', textAlign: 'center', marginTop: '100px' }}>{error}</div>;
+    return <PageContainer style={{ color: '#e74c3c', textAlign: 'center' }}>{error}</PageContainer>;
   }
 
   return (
-    <>
-      <style>{`
-        .profile-container {
-          padding: 40px 30px;
-          max-width: 600px;
-          margin: 120px auto 40px;
-          background: linear-gradient(135deg, #ffffff, #f7f9fc);
-          border-radius: 10px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-          transition: all 0.3s ease;
-        }
-        .profile-container:hover {
-          box-shadow: 0 6px 30px rgba(0, 0, 0, 0.15);
-        }
-        .profile-container h1 {
-          text-align: center;
-          margin-bottom: 30px;
-          color: #003087;
-          font-size: 2rem;
-          letter-spacing: 0.5px;
-        }
-        .form-group {
-          margin-bottom: 20px;
-        }
-        .form-group label {
-          display: block;
-          font-weight: 600;
-          margin-bottom: 8px;
-          color: #003087;
-          font-size: 0.95rem;
-        }
-        .form-group input,
-        .form-group select {
-          width: 96%;
-          padding: 14px;
-          font-size: 16px;
-          border: 1px solid #ccd0d5;
-          border-radius: 6px;
-          transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .form-group input:focus,
-        .form-group select:focus {
-          border-color: #003087;
-          box-shadow: 0 0 8px rgba(0, 48, 135, 0.2);
-          outline: none;
-        }
-        button {
-          width: 100%;
-          padding: 14px;
-          background-color: #003087;
-          color: #ffffff;
-          border: none;
-          border-radius: 6px;
-          font-size: 16px;
-          cursor: pointer;
-          margin-top: 10px;
-          transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-        button:hover {
-          background-color: #002060;
-          transform: translateY(-2px);
-        }
-        .edit-button {
-          background-color: #0070ba;
-        }
-        .edit-button:hover {
-          background-color: #005b9f;
-        }
-        .success-message {
-          color: #28a745;
-          text-align: center;
-          margin-bottom: 20px;
-          font-size: 1.1rem;
-          font-weight: 500;
-        }
-        .profile-photo-container {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        .profile-photo-container img {
-          width: 100px;
-          height: 100px;
-          border-radius: 50%;
-          object-fit: cover;
-          margin-bottom: 10px;
-        }
-        .profile-photo-container input {
-          margin-top: 10px;
-        }
-        @media (max-width: 768px) {
-          .profile-container {
-            margin: 100px 20px 40px;
-            padding: 30px 20px;
-          }
-          .profile-container h1 {
-            font-size: 1.75rem;
-          }
-          .form-group input,
-          .form-group select {
-            font-size: 14px;
-            padding: 12px;
-          }
-          button {
-            font-size: 14px;
-            padding: 12px;
-          }
-        }
-      `}</style>
-      <div className="profile-container">
-        <h1>Profil de {user.firstname} {user.lastname}</h1>
-        {message && <div className="success-message">{message}</div>}
+    <PageContainer>
+      <ProfileCard>
+        <Title>Profil de {user.firstname} {user.lastname}</Title>
+        {message && <SuccessMessage>{message}</SuccessMessage>}
 
-        <div className="profile-photo-container">
-          <img
-            src={
-              user.profile_photo
-                ? `http://localhost:5000/${user.profile_photo}`
-                : 'http://localhost:5000/uploads/default-avatar.png'
-            }
+        <ProfilePhotoContainer>
+          <ProfileImage
+            src={user.profile_photo ? `http://localhost:5000/${user.profile_photo}` : 'http://localhost:5000/uploads/default-avatar.png'}
             alt="Photo de profil"
           />
           {isEditing && (
-            <input
+            <FileInput
               type="file"
               onChange={handleFileChange}
               accept="image/*"
             />
           )}
-        </div>
+        </ProfilePhotoContainer>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Prénom</label>
-            <input
+          <FormGroup>
+            <Label>Prénom</Label>
+            <Input
               type="text"
               name="firstname"
               value={user.firstname}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Nom</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>Nom</Label>
+            <Input
               type="text"
               name="lastname"
               value={user.lastname}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>Email</Label>
+            <Input
               type="email"
               name="email"
               value={user.email}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Téléphone</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>Téléphone</Label>
+            <Input
               type="text"
               name="phone"
               value={user.phone}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Date de naissance</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>Date de naissance</Label>
+            <Input
               type="date"
               name="birthday"
               value={user.birthday}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Adresse</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>Adresse</Label>
+            <Input
               type="text"
               name="address"
               value={user.address}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>État</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>État</Label>
+            <Input
               type="text"
               name="state"
               value={user.state}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Ville</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>Ville</Label>
+            <Input
               type="text"
               name="city"
               value={user.city}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Code Postal</label>
-            <input
+          </FormGroup>
+          <FormGroup>
+            <Label>Code Postal</Label>
+            <Input
               type="text"
               name="zip"
               value={user.zip}
               onChange={handleChange}
               disabled={!isEditing}
             />
-          </div>
-          <div className="form-group">
-            <label>Genre</label>
-            <select
+          </FormGroup>
+          <FormGroup>
+            <Label>Genre</Label>
+            <Select
               name="gender"
               value={user.gender}
               onChange={handleChange}
               disabled={!isEditing}
             >
               <option value="">Sélectionner</option>
-              <option value="male">male</option>
-              <option value="female">female</option>
-            </select>
-          </div>
-          <button type="submit" disabled={!isEditing}>
+              <option value="male">Homme</option>
+              <option value="female">Femme</option>
+              <option value="other">Autre</option>
+            </Select>
+          </FormGroup>
+          <Button type="submit" disabled={!isEditing}>
             Mettre à jour le profil
-          </button>
-          <button
-            type="button"
-            className="edit-button"
-            onClick={() => setIsEditing(!isEditing)}
-          >
+          </Button>
+          <EditButton type="button" onClick={() => setIsEditing(!isEditing)}>
             {isEditing ? 'Annuler' : 'Modifier le profil'}
-          </button>
+          </EditButton>
         </form>
-      </div>
-    </>
+      </ProfileCard>
+    </PageContainer>
   );
 };
 

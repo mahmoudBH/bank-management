@@ -1,10 +1,9 @@
-// Header.js
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import styled from 'styled-components';
 import axios from 'axios';
-import { FiLogOut, FiUser, FiSettings } from 'react-icons/fi';
+import { FiLogOut, FiUser, FiSettings, FiHome, FiCreditCard, FiActivity } from 'react-icons/fi';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -20,7 +19,6 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Récupération du token depuis le localStorage
   const token = localStorage.getItem('token');
 
   // Récupération des données du profil via Axios
@@ -39,12 +37,13 @@ const Header = () => {
       });
   }, [token]);
 
+  // Ajout d'icônes dans les éléments de navigation
   const navItems = [
-    { path: '/dashboard', label: 'Tableau de bord' },
-    { path: '/payment', label: 'Payment' },
-    { path: '/transactions', label: 'Transactions' },
-    { path: '/wallet', label: 'Portefeuille' },
-    { path: '/settings', label: 'Paramètres' }
+    { path: '/dashboard', label: 'Tableau de bord', icon: <FiHome /> },
+    { path: '/payment', label: 'Payment', icon: <FiCreditCard /> },
+    { path: '/transactions', label: 'Transactions', icon: <FiActivity /> },
+    { path: '/wallet', label: 'Portefeuille', icon: <FiUser /> },
+    { path: '/settings', label: 'Paramètres', icon: <FiSettings /> }
   ];
 
   const handleLogout = () => {
@@ -74,6 +73,7 @@ const Header = () => {
               onHoverEnd={() => setHoveredIndex(-1)}
             >
               <NavLink to={item.path}>
+                <IconWrapper>{item.icon}</IconWrapper>
                 {item.label}
                 {hoveredIndex === index && (
                   <HoverLine
@@ -153,7 +153,7 @@ const Header = () => {
   );
 };
 
-// Styles et animations
+// Animations
 const headerVariants = {
   hidden: { y: -100 },
   visible: { y: 0 }
@@ -239,6 +239,12 @@ const NavList = styled.ul`
 
 const NavItem = styled(motion.li)`
   position: relative;
+`;
+
+const IconWrapper = styled.span`
+  margin-right: 0.5rem;
+  display: inline-flex;
+  vertical-align: middle;
 `;
 
 const NavLink = styled(Link)`

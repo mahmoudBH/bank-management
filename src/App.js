@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Home from './Pages/Home'
 import Login from './Authentification/Login';
 import Signup from './Authentification/Signup';
 import Dashboard from './Pages/Dashboard';
@@ -7,6 +8,9 @@ import Profile from './Pages/Profile';
 import PrivateRoute from './Authentification/PrivateRoute';
 import Header from './Pages/Header';
 import PaymentForm from './Pages/PaymentForm';
+import TransferForm from './Pages/TransferForm';
+import TransferHistory from './Pages/TransferHistory';
+import DepositWithdraw from './Pages/DepositWithdraw';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -46,6 +50,34 @@ const App = () => {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/transfer"
+            element={
+              <PrivateRoute isAuthenticated={isAuthenticated}>
+                <Header />
+                <TransferForm />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/withdraw"
+            element={
+              <PrivateRoute isAuthenticated={isAuthenticated}>
+                <Header />
+                <DepositWithdraw />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/transactions"
+            element={
+              <PrivateRoute isAuthenticated={isAuthenticated}>
+                <Header />
+                <TransferHistory />
+              </PrivateRoute>
+            }
+          />
 
 
 
@@ -60,7 +92,7 @@ const App = () => {
             }
           />
           
-          <Route path="/" element={<h2>Bienvenue sur la page d'accueil</h2>} />
+          <Route path="/home" element={<Home />} />
         </Routes>
       </div>
     </Router>
