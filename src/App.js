@@ -61,7 +61,7 @@ const App = () => {
             }
           />
           <Route
-            path="/withdraw"
+            path="/deposit-withdraw"
             element={
               <PrivateRoute isAuthenticated={isAuthenticated}>
                 <Header />

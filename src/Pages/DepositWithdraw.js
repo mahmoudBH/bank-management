@@ -1,30 +1,51 @@
-// DepositWithdraw.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
-import { jwtDecode } from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 
-const Container = styled.div`
-  max-width: 800px;
-  margin: 100px auto;
-  padding: 2rem;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+const colors = {
+  primary: '#003087',
+  secondary: '#009cde',
+  background: '#f5f7fa',
+  text: '#2d2d2d',
+  error: '#e74c3c',
+  success: '#2ecc71'
+};
+
+const PageWrapper = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  padding: 120px 20px 40px;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+`;
+
+const MainContainer = styled.div`
+  max-width: 800px;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+`;
+
+const ContentWrapper = styled.div`
+  padding: 32px;
 `;
 
 const Tabs = styled.div`
   display: flex;
-  margin-bottom: 2rem;
   gap: 1rem;
+  margin-bottom: 2rem;
 `;
 
 const Tab = styled.button`
   flex: 1;
   padding: 1rem;
-  background: ${props => props.$active ? '#003087' : '#f5f7fa'};
-  color: ${props => props.$active ? 'white' : '#2d2d2d'};
+  background: ${props => props.$active ? colors.primary : '#f5f7fa'};
+  color: ${props => props.$active ? 'white' : colors.text};
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -42,15 +63,15 @@ const BalanceDisplay = styled.div`
   padding: 1.5rem;
   background: #f8f9fa;
   border-radius: 12px;
-  
+
   h2 {
-    color: #2d2d2d;
+    color: ${colors.text};
     margin-bottom: 0.5rem;
   }
   
   .balance {
     font-size: 2rem;
-    color: #003087;
+    color: ${colors.primary};
     font-weight: 600;
   }
 `;
@@ -58,74 +79,103 @@ const BalanceDisplay = styled.div`
 const CardGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
-  margin: 1.5rem 0;
+  gap: 16px;
+  margin: 24px 0;
 `;
 
-const Card = styled.div`
-  padding: 1.5rem;
-  background: ${props => props.$selected ? '#e0e7ff' : '#f8f9fa'};
-  border: 2px solid ${props => props.$selected ? '#003087' : '#e0e0e0'};
-  border-radius: 12px;
+// Nouveau style pour les cartes de paiement
+const PaymentCard = styled.div`
+  background: linear-gradient(
+    135deg,
+    ${props => props.$selected ? '#003087' : '#1e3c72'},
+    ${props => props.$selected ? '#005b9f' : '#2a5298'}
+  );
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+  border: ${props => props.$selected ? '3px solid #00a707' : 'none'};
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: ${props =>
+    props.$selected
+      ? '0 8px 24px rgba(0, 48, 135, 0.4)'
+      : '0 4px 12px rgba(0, 0, 0, 0.15)'};
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 48, 135, 0.4);
   }
 
   .card-number {
     font-family: 'Courier New', monospace;
-    letter-spacing: 2px;
-    margin-bottom: 0.5rem;
+    letter-spacing: 3px;
+    font-size: 1.2rem;
+    margin-bottom: 16px;
   }
 
-  .amount {
-    font-size: 1.2rem;
+  .card-holder {
+    font-size: 1rem;
     font-weight: 600;
-    color: #003087;
+    margin-bottom: 8px;
+  }
+
+  .expiry {
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+
+  .balance {
+    margin-top: 16px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 `;
 
 const InputGroup = styled.div`
   margin: 1.5rem 0;
+`;
 
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #2d2d2d;
-    font-weight: 500;
-  }
+const Label = styled.label`
+  display: block;
+  font-size: 14px;
+  color: ${colors.text};
+  margin-bottom: 8px;
+  font-weight: 600;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 1rem;
-  border: 1px solid #d9e1ec;
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 1px solid #ccd0d5;
+  border-radius: 6px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 
   &:focus {
+    border-color: ${colors.primary};
+    box-shadow: 0 0 8px rgba(0, 48, 135, 0.2);
     outline: none;
-    border-color: #003087;
-    box-shadow: 0 0 0 3px rgba(0,48,135,0.1);
   }
 `;
 
 const Button = styled.button`
   width: 100%;
-  padding: 1rem;
-  background: #003087;
+  padding: 16px;
+  background: ${colors.primary};
   color: white;
   border: none;
   border-radius: 8px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  margin-top: 24px;
+  transition: background 0.3s ease, transform 0.2s ease;
 
   &:hover {
     background: #002569;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
 
   &:disabled {
@@ -134,12 +184,14 @@ const Button = styled.button`
   }
 `;
 
-const Message = styled.div`
-  padding: 1rem;
-  margin: 1rem 0;
+const StatusMessage = styled.div`
+  padding: 16px;
   border-radius: 8px;
-  background: ${props => props.$error ? '#f8d7da' : '#d4edda'};
-  color: ${props => props.$error ? '#721c24' : '#155724'};
+  margin-bottom: 24px;
+  font-size: 14px;
+  border: 1px solid ${props => props.$error ? "#f5c6cb" : "#c3e6cb"};
+  background: ${props => props.$error ? "#f8d7da" : "#d4edda"};
+  color: ${props => props.$error ? "#721c24" : "#155724"};
 `;
 
 const DepositWithdraw = () => {
@@ -166,11 +218,10 @@ const DepositWithdraw = () => {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
-
         setCards(cardsRes.data);
         setUserBalance(profileRes.data?.account_balance || 0);
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('Erreur de chargement des données:', err);
         setError('Erreur de chargement des données');
       }
     };
@@ -201,9 +252,10 @@ const DepositWithdraw = () => {
       );
 
       setMessage(response.data.message);
-      setUserBalance(response.data.new_user_balance);
-      setCards(cards.map(card => 
-        card.id === selectedCard 
+      setUserBalance(response.data.new_balance || userBalance);
+      // Mettre à jour la carte sélectionnée avec le nouveau solde (si renvoyé)
+      setCards(cards.map(card =>
+        card.id === Number(selectedCard)
           ? { ...card, amount: response.data.new_card_balance }
           : card
       ));
@@ -215,113 +267,119 @@ const DepositWithdraw = () => {
   };
 
   return (
-    <Container>
-      <h1>Gestion des fonds</h1>
-      
-      <BalanceDisplay>
-        <h2>Solde disponible</h2>
-        <div className="balance">{(userBalance || 0).toFixed(2)} €</div>
-      </BalanceDisplay>
+    <PageWrapper>
+      <MainContainer>
+        <ContentWrapper>
+          <h2 style={{ color: colors.primary, textAlign: "center", marginBottom: "32px" }}>
+            Gestion des fonds
+          </h2>
 
-      <Tabs>
-        <Tab 
-          $active={activeTab === 'deposit'}
-          onClick={() => setActiveTab('deposit')}
-        >
-          Déposer
-        </Tab>
-        <Tab 
-          $active={activeTab === 'withdraw'}
-          onClick={() => setActiveTab('withdraw')}
-        >
-          Retirer
-        </Tab>
-      </Tabs>
+          <BalanceDisplay>
+            <h2>Solde disponible</h2>
+            <div className="balance">{Number(userBalance).toFixed(2)} €</div>
+          </BalanceDisplay>
 
-      {message && <Message>{message}</Message>}
-      {error && <Message $error>{error}</Message>}
+          <Tabs>
+            <Tab $active={activeTab === 'deposit'} onClick={() => setActiveTab('deposit')}>
+              Déposer
+            </Tab>
+            <Tab $active={activeTab === 'withdraw'} onClick={() => setActiveTab('withdraw')}>
+              Retirer
+            </Tab>
+          </Tabs>
 
-      {activeTab === 'deposit' && (
-        <div>
-          <h2>Sélectionnez une carte pour déposer</h2>
-          <CardGrid>
-            {cards.map(card => (
-              <Card 
-                key={card.id}
-                $selected={selectedCard === card.id}
-                onClick={() => setSelectedCard(card.id)}
-              >
-                <div className="card-number">**** **** **** {card.card_number_last4}</div>
-                <div>Exp: {card.expiry_date}</div>
-                <div className="amount">{(card.amount || 0).toFixed(2)} €</div>
-              </Card>
-            ))}
-          </CardGrid>
+          {message && <StatusMessage>{message}</StatusMessage>}
+          {error && <StatusMessage $error>{error}</StatusMessage>}
 
-          <InputGroup>
-            <label>Montant à déposer (€)</label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              step="0.01"
-              min="0.01"
-            />
-          </InputGroup>
+          {activeTab === 'deposit' && (
+            <>
+              <h3 style={{ color: colors.text, margin: "32px 0 16px", fontSize: "18px", fontWeight: "500", textAlign: "center" }}>
+                Sélectionnez une carte pour déposer
+              </h3>
+              <CardGrid>
+                {cards.map(card => (
+                  <PaymentCard
+                    key={card.id}
+                    $selected={selectedCard === card.id.toString()}
+                    onClick={() => setSelectedCard(card.id.toString())}
+                  >
+                    <div className="card-number">•••• •••• •••• {card.card_number_last4}</div>
+                    <div className="card-holder">{card.card_holder}</div>
+                    <div className="expiry">Exp: {card.expiry_date}</div>
+                    <div className="balance">{Number(card.amount).toFixed(2)} €</div>
+                  </PaymentCard>
+                ))}
+              </CardGrid>
 
-          <InputGroup>
-            <label>Code de sécurité (CVV)</label>
-            <Input
-              type="password"
-              value={cvv}
-              onChange={(e) => setCvv(e.target.value)}
-              placeholder="123"
-              maxLength="3"
-            />
-          </InputGroup>
+              <InputGroup>
+                <Label>Montant à déposer (€)</Label>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0.01"
+                />
+              </InputGroup>
 
-          <Button onClick={() => handleTransaction('deposit')}>
-            Confirmer le dépôt
-          </Button>
-        </div>
-      )}
+              <InputGroup>
+                <Label>Code de sécurité (CVV)</Label>
+                <Input
+                  type="password"
+                  value={cvv}
+                  onChange={(e) => setCvv(e.target.value)}
+                  placeholder="123"
+                  maxLength="3"
+                />
+              </InputGroup>
 
-      {activeTab === 'withdraw' && (
-        <div>
-          <h2>Sélectionnez une carte pour retirer</h2>
-          <CardGrid>
-            {cards.map(card => (
-              <Card 
-                key={card.id}
-                $selected={selectedCard === card.id}
-                onClick={() => setSelectedCard(card.id)}
-              >
-                <div className="card-number">**** **** **** {card.card_number_last4}</div>
-                <div>Exp: {card.expiry_date}</div>
-                <div className="amount">{(card.amount || 0).toFixed(2)} €</div>
-              </Card>
-            ))}
-          </CardGrid>
+              <Button onClick={() => handleTransaction('deposit')}>
+                Confirmer le dépôt
+              </Button>
+            </>
+          )}
 
-          <InputGroup>
-            <label>Montant à retirer (€)</label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              step="0.01"
-              min="0.01"
-            />
-          </InputGroup>
+          {activeTab === 'withdraw' && (
+            <>
+              <h3 style={{ color: colors.text, margin: "32px 0 16px", fontSize: "18px", fontWeight: "500", textAlign: "center" }}>
+                Sélectionnez une carte pour retirer
+              </h3>
+              <CardGrid>
+                {cards.map(card => (
+                  <PaymentCard
+                    key={card.id}
+                    $selected={selectedCard === card.id.toString()}
+                    onClick={() => setSelectedCard(card.id.toString())}
+                  >
+                    <div className="card-number">•••• •••• •••• {card.card_number_last4}</div>
+                    <div className="card-holder">{card.card_holder}</div>
+                    <div className="expiry">Exp: {card.expiry_date}</div>
+                    <div className="balance">{Number(card.amount).toFixed(2)} €</div>
+                  </PaymentCard>
+                ))}
+              </CardGrid>
 
-          <Button onClick={() => handleTransaction('withdraw')}>
-            Confirmer le retrait
-          </Button>
-        </div>
-      )}
-    </Container>
+              <InputGroup>
+                <Label>Montant à retirer (€)</Label>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0.01"
+                />
+              </InputGroup>
+
+              <Button onClick={() => handleTransaction('withdraw')}>
+                Confirmer le retrait
+              </Button>
+            </>
+          )}
+        </ContentWrapper>
+      </MainContainer>
+    </PageWrapper>
   );
 };
 

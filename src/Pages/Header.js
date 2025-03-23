@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import styled from 'styled-components';
 import axios from 'axios';
-import { FiLogOut, FiUser, FiSettings, FiHome, FiCreditCard, FiActivity } from 'react-icons/fi';
+import { FiLogOut, FiUser, FiSettings, FiHome, FiCreditCard, FiActivity, FiRepeat, FiDownload, FiSend  } from 'react-icons/fi';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -41,8 +41,10 @@ const Header = () => {
   const navItems = [
     { path: '/dashboard', label: 'Tableau de bord', icon: <FiHome /> },
     { path: '/payment', label: 'Payment', icon: <FiCreditCard /> },
+    { path: '/transfer', label: 'Transfert', icon: <FiSend /> },
     { path: '/transactions', label: 'Transactions', icon: <FiActivity /> },
-    { path: '/wallet', label: 'Portefeuille', icon: <FiUser /> },
+    { path: '/deposit-withdraw', label: 'Dépôt & Retrait', icon: <FiDownload /> },
+    { path: '/exchange', label: 'Échange', icon: <FiRepeat /> },
   ];
 
   const handleLogout = () => {
@@ -219,7 +221,7 @@ const GradientSpan = styled.span`
 `;
 
 const Nav = styled.nav`
-  flex: 2;
+  flex: 5;
   margin: 0 2rem;
 
   @media (max-width: 1024px) {
