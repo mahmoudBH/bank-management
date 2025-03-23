@@ -43,7 +43,6 @@ const Header = () => {
     { path: '/payment', label: 'Payment', icon: <FiCreditCard /> },
     { path: '/transactions', label: 'Transactions', icon: <FiActivity /> },
     { path: '/wallet', label: 'Portefeuille', icon: <FiUser /> },
-    { path: '/settings', label: 'Paramètres', icon: <FiSettings /> }
   ];
 
   const handleLogout = () => {

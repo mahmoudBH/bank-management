@@ -1,3 +1,4 @@
+// DepositWithdraw.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
@@ -22,8 +23,8 @@ const Tabs = styled.div`
 const Tab = styled.button`
   flex: 1;
   padding: 1rem;
-  background: ${props => props.active === 'true' ? '#003087' : '#f5f7fa'};
-  color: ${props => props.active === 'true' ? 'white' : '#2d2d2d'};
+  background: ${props => props.$active ? '#003087' : '#f5f7fa'};
+  color: ${props => props.$active ? 'white' : '#2d2d2d'};
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -31,7 +32,7 @@ const Tab = styled.button`
   transition: all 0.3s ease;
 
   &:hover {
-    background: ${props => props.active === 'true' ? '#002569' : '#e0e7ff'};
+    background: ${props => props.$active ? '#002569' : '#e0e7ff'};
   }
 `;
 
@@ -63,8 +64,8 @@ const CardGrid = styled.div`
 
 const Card = styled.div`
   padding: 1.5rem;
-  background: ${props => props.selected ? '#e0e7ff' : '#f8f9fa'};
-  border: 2px solid ${props => props.selected ? '#003087' : '#e0e0e0'};
+  background: ${props => props.$selected ? '#e0e7ff' : '#f8f9fa'};
+  border: 2px solid ${props => props.$selected ? '#003087' : '#e0e0e0'};
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -137,8 +138,8 @@ const Message = styled.div`
   padding: 1rem;
   margin: 1rem 0;
   border-radius: 8px;
-  background: ${props => props.error ? '#f8d7da' : '#d4edda'};
-  color: ${props => props.error ? '#721c24' : '#155724'};
+  background: ${props => props.$error ? '#f8d7da' : '#d4edda'};
+  color: ${props => props.$error ? '#721c24' : '#155724'};
 `;
 
 const DepositWithdraw = () => {
@@ -224,13 +225,13 @@ const DepositWithdraw = () => {
 
       <Tabs>
         <Tab 
-          active={activeTab === 'deposit' ? 'true' : 'false'}
+          $active={activeTab === 'deposit'}
           onClick={() => setActiveTab('deposit')}
         >
           Déposer
         </Tab>
         <Tab 
-          active={activeTab === 'withdraw' ? 'true' : 'false'}
+          $active={activeTab === 'withdraw'}
           onClick={() => setActiveTab('withdraw')}
         >
           Retirer
@@ -238,7 +239,7 @@ const DepositWithdraw = () => {
       </Tabs>
 
       {message && <Message>{message}</Message>}
-      {error && <Message error>{error}</Message>}
+      {error && <Message $error>{error}</Message>}
 
       {activeTab === 'deposit' && (
         <div>
@@ -247,7 +248,7 @@ const DepositWithdraw = () => {
             {cards.map(card => (
               <Card 
                 key={card.id}
-                selected={selectedCard === card.id}
+                $selected={selectedCard === card.id}
                 onClick={() => setSelectedCard(card.id)}
               >
                 <div className="card-number">**** **** **** {card.card_number_last4}</div>
@@ -265,6 +266,7 @@ const DepositWithdraw = () => {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
               step="0.01"
+              min="0.01"
             />
           </InputGroup>
 
@@ -292,7 +294,7 @@ const DepositWithdraw = () => {
             {cards.map(card => (
               <Card 
                 key={card.id}
-                selected={selectedCard === card.id}
+                $selected={selectedCard === card.id}
                 onClick={() => setSelectedCard(card.id)}
               >
                 <div className="card-number">**** **** **** {card.card_number_last4}</div>
@@ -310,6 +312,7 @@ const DepositWithdraw = () => {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
               step="0.01"
+              min="0.01"
             />
           </InputGroup>
 

@@ -345,99 +345,216 @@ app.get("/api/transfer-history", verifyToken, (req, res) => {
   });
 });
 
-// Déposer depuis une carte vers le solde utilisateur
-app.post('/api/deposit', verifyToken, async (req, res) => {
+// Dépot depuis une carte vers le solde utilisateur
+app.post('/api/deposit', verifyToken, (req, res) => {
   const { card_id, amount, cvv } = req.body;
-  
-  try {
-    // Vérification CVV et solde
-    const [card] = await db.query(
-      'SELECT * FROM account_balance WHERE id = ? AND user_id = ? AND cvv = ?',
-      [card_id, req.userId, cvv]
-    );
+  const userId = req.userId;
 
-    if (!card) return res.status(400).json({ message: 'CVV invalide' });
-    if (card.amount < amount) return res.status(400).json({ message: 'Solde carte insuffisant' });
-
-    // Transaction
-    await db.beginTransaction();
-    
-    await db.query(
-      'UPDATE account_balance SET amount = amount - ? WHERE id = ?',
-      [amount, card_id]
-    );
-
-    await db.query(
-      'UPDATE users SET account_balance = account_balance + ? WHERE id = ?',
-      [amount, req.userId]
-    );
-
-    await db.commit();
-
-    // Récupération nouveaux soldes
-    const [[user], [updatedCard]] = await Promise.all([
-      db.query('SELECT account_balance FROM users WHERE id = ?', [req.userId]),
-      db.query('SELECT amount FROM account_balance WHERE id = ?', [card_id])
-    ]);
-
-    res.json({
-      message: 'Dépôt réussi',
-      new_card_balance: updatedCard.amount,
-      new_user_balance: user.account_balance
-    });
-
-  } catch (err) {
-    await db.rollback();
-    res.status(500).json({ message: 'Erreur transaction' });
+  // Validation des entrées
+  if (!card_id || !amount || !cvv) {
+    return res.status(400).json({ message: "Tous les champs sont requis" });
   }
-});
 
-// Retirer du solde utilisateur vers une carte
-app.post('/api/withdraw', verifyToken, async (req, res) => {
-  const { card_id, amount } = req.body;
+  // 1. Vérification de la carte avec sélection explicite
+  const getCardSql = `
+    SELECT id, amount 
+    FROM account_balance 
+    WHERE id = ? AND user_id = ? AND cvv = ?
+  `;
 
-  try {
-    // Vérification solde utilisateur
-    const [[user]] = await db.query(
-      'SELECT account_balance FROM users WHERE id = ?',
-      [req.userId]
-    );
-
-    if (user.account_balance < amount) {
-      return res.status(400).json({ message: 'Solde insuffisant' });
+  db.query(getCardSql, [card_id, userId, cvv], (err, cardResults) => {
+    if (err) {
+      console.error("Erreur base de données:", err);
+      return res.status(500).json({ message: "Erreur serveur" });
     }
 
-    // Transaction
-    await db.beginTransaction();
-    
-    await db.query(
-      'UPDATE users SET account_balance = account_balance - ? WHERE id = ?',
-      [amount, req.userId]
-    );
+    // Vérification renforcée des résultats
+    if (!Array.isArray(cardResults) || cardResults.length === 0 || !cardResults[0]) {
+      return res.status(400).json({ message: "CVV invalide ou carte non trouvée" });
+    }
 
-    await db.query(
-      'UPDATE account_balance SET amount = amount + ? WHERE id = ?',
-      [amount, card_id]
-    );
+    const card = cardResults[0];
+    const cardAmount = parseFloat(card.amount) || 0;
 
-    await db.commit();
+    // Vérification du solde
+    if (cardAmount < parseFloat(amount)) {
+      return res.status(400).json({ message: "Solde insuffisant sur la carte" });
+    }
 
-    // Récupération nouveaux soldes
-    const [[updatedUser], [updatedCard]] = await Promise.all([
-      db.query('SELECT account_balance FROM users WHERE id = ?', [req.userId]),
-      db.query('SELECT amount FROM account_balance WHERE id = ?', [card_id])
-    ]);
+    // 2. Transaction
+    db.beginTransaction((transactionErr) => {
+      if (transactionErr) {
+        console.error("Erreur transaction:", transactionErr);
+        return res.status(500).json({ message: "Échec de la transaction" });
+      }
 
-    res.json({
-      message: 'Retrait réussi',
-      new_card_balance: updatedCard.amount,
-      new_user_balance: updatedUser.account_balance
+      // 3. Mise à jour de la carte
+      const updateCardSql = `
+        UPDATE account_balance 
+        SET amount = amount - ? 
+        WHERE id = ? AND amount >= ?
+      `;
+
+      db.query(updateCardSql, [amount, card_id, amount], (updateErr, result) => {
+        if (updateErr) {
+          return db.rollback(() => {
+            console.error("Rollback dû à:", updateErr);
+            res.status(500).json({ message: "Erreur de mise à jour de la carte" });
+          });
+        }
+
+        // 4. Mise à jour du solde utilisateur
+        const updateUserSql = `
+          UPDATE users 
+          SET account_balance = account_balance + ? 
+          WHERE id = ?
+        `;
+
+        db.query(updateUserSql, [amount, userId], (userErr) => {
+          if (userErr) {
+            return db.rollback(() => {
+              console.error("Rollback dû à:", userErr);
+              res.status(500).json({ message: "Erreur de mise à jour du solde" });
+            });
+          }
+
+          // 5. Validation de la transaction
+          db.commit((commitErr) => {
+            if (commitErr) {
+              return db.rollback(() => {
+                console.error("Rollback dû à:", commitErr);
+                res.status(500).json({ message: "Échec de la validation" });
+              });
+            }
+
+            // 6. Récupération des nouveaux soldes
+            const getDataSql = `
+              SELECT 
+                (SELECT amount FROM account_balance WHERE id = ?) AS card_balance,
+                (SELECT account_balance FROM users WHERE id = ?) AS user_balance
+            `;
+
+            db.query(getDataSql, [card_id, userId], (finalErr, finalResults) => {
+              if (finalErr) {
+                console.error("Erreur récupération soldes:", finalErr);
+                return res.status(500).json({ message: "Erreur de récupération" });
+              }
+
+              res.json({
+                message: "Dépôt réussi",
+                new_card_balance: finalResults[0].card_balance,
+                new_user_balance: finalResults[0].user_balance
+              });
+            });
+          });
+        });
+      });
     });
+  });
+});
 
-  } catch (err) {
-    await db.rollback();
-    res.status(500).json({ message: 'Erreur transaction' });
+
+// Retrait du solde utilisateur vers une carte
+app.post('/api/withdraw', verifyToken, (req, res) => {
+  const { card_id, amount } = req.body;
+  const userId = req.userId;
+
+  // Validation des entrées
+  if (!card_id || !amount || isNaN(amount)) {
+    return res.status(400).json({ message: "Paramètres invalides" });
   }
+
+  const withdrawalAmount = parseFloat(amount);
+
+  // 1. Vérification du solde utilisateur
+  const getUserSql = "SELECT account_balance FROM users WHERE id = ?";
+  
+  db.query(getUserSql, [userId], (err, userResults) => {
+    if (err) {
+      console.error("Erreur base de données:", err);
+      return res.status(500).json({ message: "Erreur serveur" });
+    }
+
+    if (!Array.isArray(userResults) || userResults.length === 0) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    const userBalance = parseFloat(userResults[0].account_balance) || 0;
+
+    if (userBalance < withdrawalAmount) {
+      return res.status(400).json({ message: "Solde insuffisant" });
+    }
+
+    // 2. Début de la transaction
+    db.beginTransaction((transactionErr) => {
+      if (transactionErr) {
+        console.error("Erreur transaction:", transactionErr);
+        return res.status(500).json({ message: "Échec de la transaction" });
+      }
+
+      // 3. Débiter le solde utilisateur
+      const updateUserSql = `
+        UPDATE users 
+        SET account_balance = account_balance - ? 
+        WHERE id = ? AND account_balance >= ?
+      `;
+
+      db.query(updateUserSql, [withdrawalAmount, userId, withdrawalAmount], (updateUserErr, result) => {
+        if (updateUserErr) {
+          return db.rollback(() => {
+            console.error("Rollback dû à:", updateUserErr);
+            res.status(500).json({ message: "Erreur de débit du solde" });
+          });
+        }
+
+        // 4. Créditer la carte
+        const updateCardSql = `
+          UPDATE account_balance 
+          SET amount = amount + ? 
+          WHERE id = ?
+        `;
+
+        db.query(updateCardSql, [withdrawalAmount, card_id], (updateCardErr) => {
+          if (updateCardErr) {
+            return db.rollback(() => {
+              console.error("Rollback dû à:", updateCardErr);
+              res.status(500).json({ message: "Erreur de crédit de la carte" });
+            });
+          }
+
+          // 5. Valider la transaction
+          db.commit((commitErr) => {
+            if (commitErr) {
+              return db.rollback(() => {
+                console.error("Rollback dû à:", commitErr);
+                res.status(500).json({ message: "Échec de la validation" });
+              });
+            }
+
+            // 6. Récupération des nouveaux soldes
+            const getDataSql = `
+              SELECT 
+                (SELECT amount FROM account_balance WHERE id = ?) AS card_balance,
+                (SELECT account_balance FROM users WHERE id = ?) AS user_balance
+            `;
+
+            db.query(getDataSql, [card_id, userId], (finalErr, finalResults) => {
+              if (finalErr) {
+                console.error("Erreur récupération soldes:", finalErr);
+                return res.status(500).json({ message: "Erreur de récupération" });
+              }
+
+              res.json({
+                message: "Retrait réussi",
+                new_card_balance: finalResults[0].card_balance,
+                new_user_balance: finalResults[0].user_balance
+              });
+            });
+          });
+        });
+      });
+    });
+  });
 });
 
 

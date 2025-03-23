@@ -11,6 +11,7 @@ import PaymentForm from './Pages/PaymentForm';
 import TransferForm from './Pages/TransferForm';
 import TransferHistory from './Pages/TransferHistory';
 import DepositWithdraw from './Pages/DepositWithdraw';
+import Exchange from './Pages/Exchange';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -75,6 +76,16 @@ const App = () => {
               <PrivateRoute isAuthenticated={isAuthenticated}>
                 <Header />
                 <TransferHistory />
+              </PrivateRoute>
+            }
+          />
+
+<Route
+            path="/exchange"
+            element={
+              <PrivateRoute isAuthenticated={isAuthenticated}>
+                <Header />
+                <Exchange />
               </PrivateRoute>
             }
           />

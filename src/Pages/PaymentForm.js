@@ -181,6 +181,7 @@ const Message = styled.div`
 const SuccessMessage = styled(Message)`
   background: #d4edda;
   color: #155724;
+  margin-bottom: 10px;
 `;
 
 const ErrorMessage = styled(Message)`
@@ -315,9 +316,22 @@ const PaymentForm = () => {
     if (token && user_id) fetchCards();
   }, [token, user_id]);
 
+  
+
   const handleInputChange = (e) => {
-    setCardDetails({ ...cardDetails, [e.target.name]: e.target.value });
+    let { name, value } = e.target;
+  
+    if (name === "expiry") {
+      value = value.replace(/\D/g, ""); // Supprime tout sauf les chiffres
+      if (value.length > 2) {
+        value = value.slice(0, 2) + "/" + value.slice(2, 4); // Ajoute "/" après MM
+      }
+      value = value.slice(0, 5); // Limite à "MM/YY"
+    }
+  
+    setCardDetails({ ...cardDetails, [name]: value });
   };
+  
 
   const handleFocus = (e) => {
     setCardDetails({ ...cardDetails, focus: e.target.name });
@@ -455,11 +469,11 @@ const PaymentForm = () => {
                 <StyledInput
                   type="text"
                   name="expiry"
-                  maxLength="4"
+                  maxLength="5"
                   value={cardDetails.expiry}
                   onChange={handleInputChange}
                   onFocus={handleFocus}
-                  placeholder="MMYY"
+                  placeholder="MM/YY"
                   required
                 />
               </InputGroup>
