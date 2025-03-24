@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { motion } from 'framer-motion';
-import { FiArrowUpRight, FiArrowDownLeft, FiDollarSign, FiActivity } from 'react-icons/fi';
+import { FiArrowUpRight, FiArrowDownLeft, FiDollarSign, FiActivity, FiTrendingUp } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import {jwtDecode} from 'jwt-decode';
@@ -17,11 +17,15 @@ const transactionsData = [
   { name: 'Dim', income: 3000, expense: 1500 },
 ];
 
+const floatAnimation = keyframes`
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+`;
 const DashboardContainer = styled.div`
   padding: 2rem;
   max-width: 1400px;
   margin: 120px auto 0; /* marge en haut pour le header fixe */
-  background: #f7fafc;
   border-radius: 12px;
 `;
 
@@ -51,11 +55,45 @@ const Card = styled(motion.div)`
 `;
 
 const BalanceCard = styled(Card)`
-  background: linear-gradient(135deg, #003087, #002569);
+  background: linear-gradient(135deg, #003087, #009cde);
   color: white;
   grid-column: 1 / -1;
-  padding: 2.5rem;
+  padding: 3rem 2rem;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: ${floatAnimation} 8s infinite;
+  }
+
+  h1 {
+    font-size: 3.5rem;
+    margin: 1.5rem 0;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+`;
+const StatBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: rgba(0, 48, 135, 0.1);
+  color:rgb(255, 255, 255);
+  font-size: 0.9rem;
+  margin: 0 0.5rem;
+
+  svg {
+    margin-right: 0.5rem;
+  }
 `;
 
 const TransactionItem = styled(motion.div)`
@@ -92,13 +130,6 @@ const QuickActionButton = styled(motion.button)`
   }
 `;
 
-const Title = styled.h1`
-  text-align: center;
-  color: #003087;
-  margin-bottom: 32px;
-  font-size: 2.5rem;
-  letter-spacing: 0.5px;
-`;
 
 const Dashboard = () => {
   const [profile, setProfile] = useState(null);
@@ -176,16 +207,30 @@ const Dashboard = () => {
 
   return (
     <DashboardContainer>
-      <Title>Tableau de bord</Title>
-      <BalanceCard>
-        <h2>Solde Total</h2>
-        <h1>{profile ? profile.account_balance.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : '0,00 €'}</h1>
-        <div style={{ display: 'flex', gap: '1rem', color: '#a0aec0' }}>
-          <span>+12% ce mois</span>
-          <span>●</span>
-          <span>3 transactions</span>
-        </div>
-      </BalanceCard>
+      <BalanceCard
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2>Solde Total</h2>
+            <h1>
+              {profile ? profile.account_balance.toLocaleString('fr-FR', { 
+                style: 'currency', 
+                currency: 'EUR',
+                minimumFractionDigits: 2
+              }) : '0,00 €'}
+            </h1>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              <StatBadge>
+                <FiTrendingUp />
+                +12% ce mois
+              </StatBadge>
+              <StatBadge>
+                <FiActivity />
+                {allActivities.length} transactions
+              </StatBadge>
+            </div>
+          </BalanceCard>
       
       <Grid>
         <Card

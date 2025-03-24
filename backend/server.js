@@ -136,7 +136,7 @@ const verifyToken = (req, res, next) => {
 app.get('/api/profile', verifyToken, (req, res) => {
   const userId = req.userId;
 
-  const sql = `SELECT firstname, lastname, email, phone, birthday, address, state, city, zip, gender, COALESCE(account_balance, 0) AS account_balance, 
+  const sql = `SELECT id, firstname, lastname, email, phone, birthday, address, state, city, zip, gender, COALESCE(account_balance, 0) AS account_balance, 
                       REPLACE(profile_photo, 'uploads/profile_photo-', '') AS profile_photo 
                FROM users WHERE id = ?`;
 
